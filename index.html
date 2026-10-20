@@ -1,0 +1,638 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Team 26 Energy Monitor · Bluetooth</title>
+
+<style>
+* { box-sizing: border-box; }
+
+:root {
+    --bg: #070b11;
+    --panel: #0f1621;
+    --panel2: #121b28;
+    --border: #1d2a3a;
+    --text: #eef3f9;
+    --muted: #7f8ea3;
+    --faint: #4f5d70;
+    --blue: #5aa9ff;
+    --violet: #a58bff;
+    --amber: #ffb547;
+    --green: #4fe39a;
+    --red: #ff6b74;
+}
+
+html, body { margin: 0; background: var(--bg); }
+
+body {
+    min-height: 100vh;
+    color: var(--text);
+    font-family: "Segoe UI", system-ui, -apple-system, Arial, sans-serif;
+    background: radial-gradient(1100px 500px at 50% -10%, #13253d 0%, var(--bg) 60%);
+    -webkit-font-smoothing: antialiased;
+}
+
+.num { font-variant-numeric: tabular-nums; }
+
+header {
+    position: sticky; top: 0; z-index: 20;
+    display: flex; justify-content: space-between; align-items: center; gap: 16px;
+    padding: 14px 28px;
+    background: rgba(7,11,17,0.88);
+    backdrop-filter: blur(10px);
+    border-bottom: 1px solid var(--border);
+}
+
+.brand { display: flex; align-items: center; gap: 13px; }
+
+.logo {
+    width: 40px; height: 40px; display: grid; place-items: center;
+    border-radius: 11px; font-weight: 800;
+    background: linear-gradient(135deg, #2687ff, #7a5cff);
+    box-shadow: 0 6px 18px rgba(60,120,255,0.3);
+}
+
+.brand h1 { margin: 0; font-size: 17px; }
+.brand p  { margin: 3px 0 0; color: var(--muted); font-size: 11px; letter-spacing: 0.9px; }
+
+.header-right { display: flex; align-items: center; gap: 10px; }
+
+.pill {
+    display: flex; align-items: center; gap: 8px;
+    padding: 7px 12px;
+    border: 1px solid var(--border); border-radius: 999px;
+    font-size: 11px; font-weight: 700; letter-spacing: 0.8px;
+    background: rgba(255,255,255,0.02);
+}
+
+.dot { width: 8px; height: 8px; border-radius: 50%; }
+.dot.on  { background: var(--green); box-shadow: 0 0 10px rgba(79,227,154,0.9); animation: pulse 1.6s infinite; }
+.dot.off { background: var(--red);   box-shadow: 0 0 10px rgba(255,107,116,0.8); }
+@keyframes pulse { 50% { opacity: 0.45; } }
+
+main { width: min(1280px, calc(100% - 32px)); margin: 24px auto 48px; }
+
+.grid { display: grid; gap: 16px; }
+.hero-grid   { grid-template-columns: 1.25fr 1fr; }
+.metric-grid { grid-template-columns: 1fr 1fr; }
+
+.card {
+    position: relative; padding: 20px;
+    border: 1px solid var(--border); border-radius: 18px;
+    background: linear-gradient(150deg, var(--panel2), var(--panel));
+}
+
+.section { margin-top: 16px; }
+
+.label { color: var(--muted); font-size: 11px; font-weight: 600; letter-spacing: 1.1px; text-transform: uppercase; }
+
+.card-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-bottom: 14px; }
+.card-head h2 { margin: 0; font-size: 15px; }
+.card-head p  { margin: 4px 0 0; color: var(--muted); font-size: 11.5px; }
+
+.badge {
+    flex-shrink: 0; padding: 5px 9px;
+    border: 1px solid var(--border); border-radius: 999px;
+    color: var(--muted); font-size: 10px; letter-spacing: 0.8px; text-transform: uppercase;
+}
+
+/* Connect screen */
+
+.connect {
+    margin-top: 40px; padding: 48px 24px; text-align: center;
+}
+
+.connect h2 { margin: 18px 0 8px; font-size: 22px; }
+.connect p  { margin: 0 auto; max-width: 460px; color: var(--muted); font-size: 13.5px; line-height: 1.6; }
+
+.bt-icon {
+    width: 72px; height: 72px; margin: 0 auto;
+    display: grid; place-items: center;
+    border-radius: 22px;
+    background: linear-gradient(135deg, #2687ff, #7a5cff);
+    box-shadow: 0 10px 30px rgba(60,120,255,0.35);
+    font-size: 34px;
+}
+
+.notice {
+    margin: 18px auto 0; max-width: 460px;
+    padding: 12px 14px;
+    border: 1px solid rgba(255,181,71,0.3); border-radius: 10px;
+    background: rgba(255,181,71,0.06);
+    color: var(--amber); font-size: 12.5px;
+}
+
+/* Hero */
+
+.hero { min-height: 230px; overflow: hidden; background: linear-gradient(150deg, #10213a, #0c131e); }
+
+.hero::after {
+    content: ""; position: absolute;
+    width: 340px; height: 340px; top: -160px; right: -90px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(90,169,255,0.22), transparent 68%);
+    pointer-events: none;
+}
+
+.hero-value {
+    margin-top: 18px; display: flex; align-items: baseline; gap: 10px;
+    font-size: 76px; font-weight: 750; line-height: 1; letter-spacing: -3px;
+}
+
+.hero-value .unit { font-size: 24px; color: var(--muted); letter-spacing: 0; font-weight: 600; }
+
+.hero-foot { margin-top: 18px; display: flex; flex-wrap: wrap; gap: 22px; color: var(--muted); font-size: 12px; }
+.hero-foot b { color: var(--text); font-weight: 600; }
+
+.metric { padding: 18px; }
+.metric-value { margin-top: 10px; font-size: 28px; font-weight: 700; }
+.metric-value .u { margin-left: 4px; font-size: 13px; color: var(--muted); font-weight: 600; }
+.metric-sub { margin-top: 4px; color: var(--faint); font-size: 10.5px; }
+
+.accent-blue   { border-top: 2px solid var(--blue); }
+.accent-violet { border-top: 2px solid var(--violet); }
+.accent-amber  { border-top: 2px solid var(--amber); }
+.accent-green  { border-top: 2px solid var(--green); }
+
+.chart-wrap { position: relative; width: 100%; height: 290px; border-radius: 12px; background: #0a1019; overflow: hidden; }
+.chart-wrap canvas { width: 100%; height: 100%; display: block; }
+
+.stats { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; }
+
+.stat {
+    padding: 14px;
+    border: 1px solid rgba(255,255,255,0.05); border-radius: 12px;
+    background: rgba(255,255,255,0.02);
+}
+
+.stat-value { margin-top: 7px; font-size: 19px; font-weight: 650; }
+.stat-value .u { font-size: 12px; color: var(--muted); margin-left: 3px; }
+
+.actions { display: flex; gap: 10px; flex-wrap: wrap; }
+
+button {
+    padding: 10px 16px;
+    border: 1px solid var(--border); border-radius: 10px;
+    background: #131e2d; color: var(--text);
+    font: inherit; font-size: 13px; font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s;
+}
+
+button:hover { background: #1a2839; border-color: #2a3c52; }
+button.primary { background: linear-gradient(135deg, #2a7fff, #6a5cff); border-color: transparent; }
+button.primary:hover { filter: brightness(1.1); }
+button.big { margin-top: 24px; padding: 13px 26px; font-size: 14.5px; }
+button:disabled { opacity: 0.5; cursor: default; }
+
+.hidden { display: none !important; }
+
+footer { margin-top: 22px; text-align: center; color: var(--faint); font-size: 11px; }
+
+@media (max-width: 1000px) {
+    .hero-grid { grid-template-columns: 1fr; }
+    .stats { grid-template-columns: repeat(3, 1fr); }
+}
+
+@media (max-width: 560px) {
+    header { padding: 12px 14px; }
+    main { width: calc(100% - 20px); margin-top: 12px; }
+    .hero-value { font-size: 58px; }
+    .metric-value { font-size: 23px; }
+    .stats { grid-template-columns: repeat(2, 1fr); }
+    .chart-wrap { height: 230px; }
+}
+</style>
+</head>
+
+<body>
+
+<header>
+    <div class="brand">
+        <div class="logo">26</div>
+        <div>
+            <h1>Smart Energy Monitor</h1>
+            <p>ELECTENG 209 · TEAM 26 · BLUETOOTH</p>
+        </div>
+    </div>
+    <div class="header-right">
+        <div class="pill"><div id="liveDot" class="dot off"></div><span id="liveText">DISCONNECTED</span></div>
+        <button id="headerBtn" class="hidden" onclick="disconnect()">Disconnect</button>
+    </div>
+</header>
+
+<main>
+
+<!-- ================= CONNECT SCREEN ================= -->
+
+<section id="connectScreen" class="card connect">
+    <div class="bt-icon">ᛒ</div>
+    <h2>Connect to your Energy Monitor</h2>
+    <p>Make sure the monitor is powered on and Bluetooth is enabled on this device, then tap Connect and choose <b>Team26_EnergyMonitor</b>.</p>
+    <button id="connectBtn" class="primary big" onclick="connect()">Connect via Bluetooth</button>
+    <div id="notice" class="notice hidden"></div>
+</section>
+
+<!-- ================= DASHBOARD ================= -->
+
+<div id="dashboard" class="hidden">
+
+<div class="grid hero-grid">
+    <div class="card hero">
+        <div class="label">Live Real Power</div>
+        <div class="hero-value num"><span id="power">--</span><span class="unit">W</span></div>
+        <div class="hero-foot">
+            <span>Peak <b class="num" id="heroPeak">--</b> W</span>
+            <span>Average <b class="num" id="heroAvg">--</b> W</span>
+            <span>Last update <b class="num" id="lastUpdate">--</b></span>
+        </div>
+    </div>
+
+    <div class="grid metric-grid">
+        <div class="card metric accent-blue">
+            <div class="label">RMS Voltage</div>
+            <div class="metric-value num"><span id="voltage">--</span><span class="u">V</span></div>
+            <div class="metric-sub">AC source measurement</div>
+        </div>
+        <div class="card metric accent-violet">
+            <div class="label">Peak Current</div>
+            <div class="metric-value num"><span id="current">--</span><span class="u">mA</span></div>
+            <div class="metric-sub">Peak load current</div>
+        </div>
+        <div class="card metric accent-amber">
+            <div class="label">Energy</div>
+            <div class="metric-value num"><span id="energy">--</span><span class="u">Wh</span></div>
+            <div class="metric-sub">Accumulated on device</div>
+        </div>
+        <div class="card metric accent-green">
+            <div class="label">Average Power</div>
+            <div class="metric-value num"><span id="avgPower">--</span><span class="u">W</span></div>
+            <div class="metric-sub">Since connecting</div>
+        </div>
+    </div>
+</div>
+
+<section class="card section">
+    <div class="card-head">
+        <div>
+            <h2>Power History</h2>
+            <p>Real power, last 2 minutes</p>
+        </div>
+        <div class="badge">Live · Bluetooth LE</div>
+    </div>
+    <div class="chart-wrap"><canvas id="chartP"></canvas></div>
+</section>
+
+<section class="card section">
+    <div class="card-head">
+        <div>
+            <h2>Session Statistics</h2>
+            <p>Since this device connected</p>
+        </div>
+        <div class="actions">
+            <button onclick="exportCSV()">Export CSV</button>
+            <button onclick="resetStats()">Reset Stats</button>
+        </div>
+    </div>
+    <div class="stats">
+        <div class="stat"><div class="label">Connected</div><div class="stat-value num" id="runtime">00:00</div></div>
+        <div class="stat"><div class="label">Peak Power</div><div class="stat-value num"><span id="maxPower">--</span><span class="u">W</span></div></div>
+        <div class="stat"><div class="label">Min Voltage</div><div class="stat-value num"><span id="minVoltage">--</span><span class="u">V</span></div></div>
+        <div class="stat"><div class="label">Max Voltage</div><div class="stat-value num"><span id="maxVoltage">--</span><span class="u">V</span></div></div>
+        <div class="stat"><div class="label">Peak Current</div><div class="stat-value num"><span id="maxCurrent">--</span><span class="u">mA</span></div></div>
+    </div>
+</section>
+
+</div>
+
+<footer>Smart Energy Monitor · ESP32 + ATmega328P · ELECTENG 209 Team 26</footer>
+
+</main>
+
+<script>
+const SERVICE_UUID = "26e20900-0000-1000-8000-00805f9b34fb";
+const CHAR_UUIDS = {
+    v: "26e20901-0000-1000-8000-00805f9b34fb",
+    i: "26e20902-0000-1000-8000-00805f9b34fb",
+    p: "26e20903-0000-1000-8000-00805f9b34fb",
+    e: "26e20904-0000-1000-8000-00805f9b34fb"
+};
+
+const MAX_POINTS = 120;
+
+const $ = id => document.getElementById(id);
+const decoder = new TextDecoder();
+
+let device = null;
+let latest = { v: null, i: null, p: null, e: null };
+let history = [];
+let csvRows = [];
+let stats = null;
+let connectedAt = 0;
+let lastUpdateAt = 0;
+let userDisconnect = false;
+
+// ------------------------------------------------------------
+// HELPERS
+// ------------------------------------------------------------
+
+function pad(n) { return String(n).padStart(2, "0"); }
+
+function fmtDuration(sec)
+{
+    const h = Math.floor(sec / 3600), m = Math.floor((sec % 3600) / 60), s = sec % 60;
+    return h > 0 ? h + ":" + pad(m) + ":" + pad(s) : pad(m) + ":" + pad(s);
+}
+
+function setLive(on, text)
+{
+    $("liveDot").className = "dot " + (on ? "on" : "off");
+    $("liveText").innerText = text;
+}
+
+function showNotice(text)
+{
+    $("notice").innerText = text;
+    $("notice").classList.remove("hidden");
+}
+
+function showDashboard(show)
+{
+    $("connectScreen").classList.toggle("hidden", show);
+    $("dashboard").classList.toggle("hidden", !show);
+    $("headerBtn").classList.toggle("hidden", !show);
+}
+
+// ------------------------------------------------------------
+// BLUETOOTH
+// ------------------------------------------------------------
+
+if(!navigator.bluetooth)
+{
+    $("connectBtn").disabled = true;
+    showNotice("This browser doesn't support Web Bluetooth. Use Chrome or Edge on Android, Windows, macOS or ChromeOS. On iPhone, use the WiFi dashboard instead.");
+}
+
+async function connect()
+{
+    try
+    {
+        $("connectBtn").disabled = true;
+        setLive(false, "SEARCHING");
+
+        device = await navigator.bluetooth.requestDevice({
+            filters: [{ services: [SERVICE_UUID] }]
+        });
+
+        device.addEventListener("gattserverdisconnected", onDisconnected);
+        await connectGatt();
+    }
+    catch(err)
+    {
+        $("connectBtn").disabled = false;
+        setLive(false, "DISCONNECTED");
+        if(err.name !== "NotFoundError") showNotice("Connection failed: " + err.message);
+    }
+}
+
+async function connectGatt()
+{
+    setLive(false, "CONNECTING");
+
+    const server  = await device.gatt.connect();
+    const service = await server.getPrimaryService(SERVICE_UUID);
+
+    for(const key of Object.keys(CHAR_UUIDS))
+    {
+        const ch = await service.getCharacteristic(CHAR_UUIDS[key]);
+
+        // Initial value
+        const initial = await ch.readValue();
+        latest[key] = parseFloat(decoder.decode(initial));
+
+        // Live updates
+        await ch.startNotifications();
+        ch.addEventListener("characteristicvaluechanged", e =>
+        {
+            latest[key] = parseFloat(decoder.decode(e.target.value));
+
+            // Power is the last characteristic notified in each packet
+            if(key === "p") onPacket();
+        });
+    }
+
+    userDisconnect = false;
+    connectedAt = Date.now();
+    resetStats();
+    showDashboard(true);
+    setLive(true, "LIVE");
+    onPacket();
+}
+
+async function onDisconnected()
+{
+    setLive(false, "RECONNECTING");
+
+    if(userDisconnect) { showDashboard(false); setLive(false, "DISCONNECTED"); $("connectBtn").disabled = false; return; }
+
+    // Auto-reconnect a few times
+    for(let attempt = 0; attempt < 5; attempt++)
+    {
+        try { await connectGatt(); return; }
+        catch(e) { await new Promise(r => setTimeout(r, 2000)); }
+    }
+
+    showDashboard(false);
+    setLive(false, "DISCONNECTED");
+    $("connectBtn").disabled = false;
+    showNotice("Lost connection to the monitor. Tap Connect to try again.");
+}
+
+function disconnect()
+{
+    userDisconnect = true;
+    if(device && device.gatt.connected) device.gatt.disconnect();
+}
+
+// ------------------------------------------------------------
+// DATA
+// ------------------------------------------------------------
+
+function onPacket()
+{
+    const { v, i, p, e } = latest;
+    if([v, i, p, e].some(x => x === null || isNaN(x))) return;
+
+    lastUpdateAt = Date.now();
+
+    $("voltage").innerText = v.toFixed(2);
+    $("current").innerText = i.toFixed(0);
+    $("power").innerText   = p.toFixed(2);
+    $("energy").innerText  = e.toFixed(4);
+
+    // Session stats (client side)
+    if(!stats) stats = { minV: v, maxV: v, maxI: i, maxP: p, sumP: 0, n: 0 };
+    stats.minV = Math.min(stats.minV, v);
+    stats.maxV = Math.max(stats.maxV, v);
+    stats.maxI = Math.max(stats.maxI, i);
+    stats.maxP = Math.max(stats.maxP, p);
+    stats.sumP += p;
+    stats.n++;
+
+    const avg = stats.sumP / stats.n;
+
+    $("avgPower").innerText   = avg.toFixed(2);
+    $("heroAvg").innerText    = avg.toFixed(2);
+    $("heroPeak").innerText   = stats.maxP.toFixed(2);
+    $("maxPower").innerText   = stats.maxP.toFixed(2);
+    $("minVoltage").innerText = stats.minV.toFixed(2);
+    $("maxVoltage").innerText = stats.maxV.toFixed(2);
+    $("maxCurrent").innerText = stats.maxI.toFixed(0);
+
+    const sample = { t: new Date(), v, i, p, e };
+    history.push(sample);
+    if(history.length > MAX_POINTS) history.shift();
+    csvRows.push(sample);
+
+    drawChart();
+}
+
+function resetStats()
+{
+    stats = null;
+    history = [];
+    csvRows = [];
+    ["avgPower", "heroAvg", "heroPeak", "maxPower", "minVoltage", "maxVoltage", "maxCurrent"].forEach(id => $(id).innerText = "--");
+    drawChart();
+}
+
+// ------------------------------------------------------------
+// CHART
+// ------------------------------------------------------------
+
+function niceMax(v)
+{
+    if(v <= 0) return 1;
+    const exp = Math.pow(10, Math.floor(Math.log10(v)));
+    const f = v / exp;
+    return (f <= 1 ? 1 : f <= 2 ? 2 : f <= 5 ? 5 : 10) * exp;
+}
+
+function drawChart()
+{
+    const c = $("chartP");
+    const ctx = c.getContext("2d");
+    const r = window.devicePixelRatio || 1;
+    c.width = c.clientWidth * r;
+    c.height = c.clientHeight * r;
+
+    const W = c.width, H = c.height;
+    const padL = 46 * r, padR = 14 * r, padT = 14 * r, padB = 24 * r;
+    const plotW = W - padL - padR, plotH = H - padT - padB;
+
+    ctx.clearRect(0, 0, W, H);
+
+    const hi = niceMax(Math.max(1, ...history.map(d => d.p)) * 1.15);
+
+    ctx.font = (10 * r) + "px Segoe UI, Arial";
+    ctx.textAlign = "right";
+    ctx.textBaseline = "middle";
+
+    for(let g = 0; g <= 4; g++)
+    {
+        const y = padT + plotH * g / 4;
+        ctx.strokeStyle = "rgba(255,255,255,0.055)";
+        ctx.beginPath(); ctx.moveTo(padL, y); ctx.lineTo(W - padR, y); ctx.stroke();
+        ctx.fillStyle = "#56647a";
+        ctx.fillText((hi * (1 - g / 4)).toFixed(2), padL - 8 * r, y);
+    }
+
+    ctx.textAlign = "center";
+    ctx.textBaseline = "top";
+    [120, 90, 60, 30, 0].forEach(s =>
+    {
+        const x = padL + plotW * (1 - s / (MAX_POINTS - 1));
+        ctx.fillText(s === 0 ? "now" : "-" + s + "s", x, H - padB + 7 * r);
+    });
+
+    if(history.length < 2) return;
+
+    const offset = MAX_POINTS - history.length;
+    const pts = history.map((d, k) => ({
+        x: padL + plotW * (k + offset) / (MAX_POINTS - 1),
+        y: padT + plotH * (1 - d.p / hi)
+    }));
+
+    const grad = ctx.createLinearGradient(0, padT, 0, padT + plotH);
+    grad.addColorStop(0, "rgba(90,169,255,0.25)");
+    grad.addColorStop(1, "rgba(90,169,255,0)");
+
+    ctx.beginPath();
+    pts.forEach((p, k) => k ? ctx.lineTo(p.x, p.y) : ctx.moveTo(p.x, p.y));
+    ctx.lineTo(pts[pts.length - 1].x, padT + plotH);
+    ctx.lineTo(pts[0].x, padT + plotH);
+    ctx.closePath();
+    ctx.fillStyle = grad;
+    ctx.fill();
+
+    ctx.beginPath();
+    pts.forEach((p, k) => k ? ctx.lineTo(p.x, p.y) : ctx.moveTo(p.x, p.y));
+    ctx.strokeStyle = "#5aa9ff";
+    ctx.lineWidth = 2.2 * r;
+    ctx.lineJoin = "round";
+    ctx.stroke();
+
+    const last = pts[pts.length - 1];
+    ctx.beginPath();
+    ctx.arc(last.x, last.y, 4 * r, 0, Math.PI * 2);
+    ctx.fillStyle = "#5aa9ff";
+    ctx.fill();
+}
+
+window.addEventListener("resize", drawChart);
+
+// ------------------------------------------------------------
+// EXPORT
+// ------------------------------------------------------------
+
+function exportCSV()
+{
+    if(!csvRows.length) { alert("No data recorded yet."); return; }
+
+    let csv = "timestamp,voltage_V,current_mA,power_W,energy_Wh\n";
+    csvRows.forEach(d =>
+    {
+        csv += d.t.toISOString() + "," + d.v.toFixed(2) + "," + d.i.toFixed(0) + "," +
+               d.p.toFixed(2) + "," + d.e.toFixed(5) + "\n";
+    });
+
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(new Blob([csv], { type: "text/csv" }));
+    a.download = "team26_energy_bluetooth.csv";
+    a.click();
+    URL.revokeObjectURL(a.href);
+}
+
+// ------------------------------------------------------------
+// TICKER
+// ------------------------------------------------------------
+
+setInterval(() =>
+{
+    if(!connectedAt || $("dashboard").classList.contains("hidden")) return;
+
+    $("runtime").innerText = fmtDuration(Math.floor((Date.now() - connectedAt) / 1000));
+
+    const age = (Date.now() - lastUpdateAt) / 1000;
+    $("lastUpdate").innerText = age.toFixed(1) + " s ago";
+
+    if(age > 3) setLive(false, "NO SENSOR DATA");
+    else        setLive(true, "LIVE");
+}, 500);
+
+drawChart();
+</script>
+
+</body>
+</html>
